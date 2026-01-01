@@ -1,7 +1,8 @@
 // src/workers/imageProcessor.worker.ts
 
 import { parseFilenameTemplate, getUniqueFilename } from '../utils/filenameUtils';
-import { ImageFormat } from '../components/UploadDropzone'; // Re-import for type consistency
+import type { ImageFormat } from "@components/UploadDropzone";
+
 
 type FitOption = 'contain' | 'cover' | 'crop';
 
@@ -42,8 +43,6 @@ interface DoneMessage {
   type: 'done';
   results: ProcessedImageResult[];
 }
-
-type WorkerResponse = ProgressUpdateMessage | DoneMessage;
 
 /**
  * Calculates the Euclidean distance between two RGB colors.

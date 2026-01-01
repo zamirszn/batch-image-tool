@@ -1,5 +1,19 @@
 // src/workers/image.worker.ts
-import { removeBackground } from "@imgly/background-removal";
+import { removeBackground, type Config } from "@imgly/background-removal";
+
+
+const progress: NonNullable<Config["progress"]> = (
+  key: string,
+  current: number,
+  total: number
+) => {
+  self.postMessage({
+    type: "model-load-progress",
+    key,
+    current,
+    total,
+  });
+};
 
 // --- Type Definitions ---
 type FitOption = 'contain' | 'cover' | 'crop';
@@ -50,16 +64,8 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
       // Remove background if requested using Imgly
       if (options.removeBackground) {
         processedFile = await removeBackground(image.file, {
-          progress: (key, current, total) => {
-            // Post model download progress back to the main thread
-            self.postMessage({
-              type: 'model-load-progress',
-              key,
-              current,
-              total,
-            });
-          },
-          model: 'isnet_quint8', // Use the small model
+          model: "isnet_quint8",
+          progress,
         });
       }
 

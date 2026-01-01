@@ -1,8 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Batch Image Tool
 
-## Getting Started
+A **Next.js** web application for batch processing images with features like resizing, cropping, rounded corners, and on-device background removal using [`@imgly/background-removal`](https://www.npmjs.com/package/@imgly/background-removal).
 
-First, run the development server:
+## Features
+
+* Batch upload and processing of images
+* Resize images with `cover`, `contain`, or `crop` options
+* Apply rounded corners that crop the image corners
+* On-device background removal using AI (`@imgly/background-removal`)
+* Download processed images individually or as a zip
+* Supports JPEG, PNG, and WebP formats
+* Maintains high performance using Web Workers
+
+## Demo
+
+> Add link to live demo if available
+
+## Installation
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/zamirszn/batch-image-tool.git
+cd batch-image-tool
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+# or
+yarn
+# or
+pnpm install
+```
+
+3. Run the development server:
 
 ```bash
 npm run dev
@@ -10,27 +43,40 @@ npm run dev
 yarn dev
 # or
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Upload multiple images via the drag-and-drop area.
+2. Configure processing options:
 
-## Learn More
+   * Resize dimensions
+   * Fit method: `cover`, `contain`, or `crop`
+   * Border radius
+   * Output format (JPEG, PNG, WebP)
+   * Enable background removal
+3. Start processing and wait for progress indicators.
+4. Download processed images.
 
-To learn more about Next.js, take a look at the following resources:
+## Technologies
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+* **Next.js** – React framework for server-side rendering and optimized frontend
+* **TypeScript** – Type safety
+* **Tailwind CSS** – Styling
+* **Web Workers** – For offloading image processing to prevent UI blocking
+* **@imgly/background-removal** – On-device AI background removal
+* **JSZip & FileSaver** – Batch downloading of processed images
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Contributing
 
-## Deploy on Vercel
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -m 'Add new feature'`)
+4. Push to the branch (`git push origin feature/my-feature`)
+5. Open a Pull Request
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT License © [zamirszn](https://github.com/zamirszn)

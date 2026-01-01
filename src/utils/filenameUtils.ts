@@ -23,7 +23,6 @@ export function parseFilenameTemplate(template: string, metadata: ImageMetadata)
     const { originalName, outputWidth, outputHeight, outputFormat, presetName, timestamp, index } = metadata;
 
     const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.') > 0 ? originalName.lastIndexOf('.') : originalName.length);
-    const originalExt = originalName.substring(originalName.lastIndexOf('.') > 0 ? originalName.lastIndexOf('.') + 1 : originalName.length);
 
     const ratio = outputWidth && outputHeight ? `${outputWidth / gcd(outputWidth, outputHeight)}x${outputHeight / gcd(outputWidth, outputHeight)}` : '';
 

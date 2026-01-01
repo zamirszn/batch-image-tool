@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useCallback, useState, useEffect } from "react";
@@ -8,8 +9,13 @@ import { saveAs } from "file-saver";
 
 // --- Type Definitions ---
 
-type ImageFormat = 'jpeg' | 'png' | 'webp';
-type FitOption = 'contain' | 'cover' | 'crop';
+
+export type ImageFormat = 'jpeg' | 'png' | 'webp';
+export type FitOption = 'contain' | 'cover' | 'crop';
+
+
+
+
 
 type ImageState = {
   id: string; // Unique ID for stable keys and removal
@@ -67,14 +73,14 @@ type WorkerResponse = ProgressUpdateMessage | DoneMessage | ModelLoadProgressMes
 
 // --- Constants ---
 const defaultOptions = {
-    resizeDimensions: { width: 512, height: 512 },
-    borderRadius: 0,
-    format: 'jpeg' as ImageFormat,
-    quality: 90,
-    fitOption: 'cover' as FitOption,
+  resizeDimensions: { width: 512, height: 512 },
+  borderRadius: 0,
+  format: 'jpeg' as ImageFormat,
+  quality: 90,
+  fitOption: 'cover' as FitOption,
 
-    removeBackground: false,
-    filenameTemplate: "{name}_{index}",
+  removeBackground: false,
+  filenameTemplate: "{name}_{index}",
 };
 
 const presets: Record<string, Record<string, Preset>> = {
@@ -97,13 +103,25 @@ const presets: Record<string, Record<string, Preset>> = {
 // --- Component ---
 
 export default function UploadDropzone() {
+
+
+  const [isModelCached, setIsModelCached] = useState<boolean>(false);
+  const [showConsentModal, setShowConsentModal] = useState<boolean>(false);
+
+  // Check localStorage on mount
+  useEffect(() => {
+    const cached = localStorage.getItem("bg-removal-model-cached");
+    if (cached === "true") {
+      setIsModelCached(true);
+    }
+  }, []);
+
+
   const [images, setImages] = useState<ImageState[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [overallProgress, setOverallProgress] = useState(0);
   const [processedImageNames, setProcessedImageNames] = useState<Set<string>>(new Set());
   const [modelLoadProgress, setModelLoadProgress] = useState<{ current: number, total: number } | null>(null);
-  const [showModelConfirm, setShowModelConfirm] = useState(false);
-  const [deferredProcess, setDeferredProcess] = useState<(() => void) | null>(null);
 
   // Options State
   const [resizeDimensions, setResizeDimensions] = useState<{ width: number, height: number }>(defaultOptions.resizeDimensions);
@@ -122,13 +140,13 @@ export default function UploadDropzone() {
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newImages = acceptedFiles.map((file) => {
-        const previewUrl = URL.createObjectURL(file);
-        return {
-            id: `${file.name}-${file.lastModified}-${Math.random()}`, // Create a reasonably unique ID
-            originalFile: file,
-            originalPreview: previewUrl,
-            currentPreview: previewUrl,
-        };
+      const previewUrl = URL.createObjectURL(file);
+      return {
+        id: `${file.name}-${file.lastModified}-${Math.random()}`, // Create a reasonably unique ID
+        originalFile: file,
+        originalPreview: previewUrl,
+        currentPreview: previewUrl,
+      };
     });
     setImages((prev) => [...prev, ...newImages]);
   }, []);
@@ -139,7 +157,7 @@ export default function UploadDropzone() {
       if (imageToRemove) {
         URL.revokeObjectURL(imageToRemove.originalPreview);
         if (imageToRemove.originalPreview !== imageToRemove.currentPreview) {
-            URL.revokeObjectURL(imageToRemove.currentPreview);
+          URL.revokeObjectURL(imageToRemove.currentPreview);
         }
       }
       return prev.filter((img) => img.id !== idToRemove);
@@ -148,10 +166,10 @@ export default function UploadDropzone() {
 
   const clearAll = () => {
     images.forEach((img) => {
-        URL.revokeObjectURL(img.originalPreview);
-        if (img.originalPreview !== img.currentPreview) {
-            URL.revokeObjectURL(img.currentPreview);
-        }
+      URL.revokeObjectURL(img.originalPreview);
+      if (img.originalPreview !== img.currentPreview) {
+        URL.revokeObjectURL(img.currentPreview);
+      }
     });
     setImages([]);
     setOverallProgress(0);
@@ -169,7 +187,7 @@ export default function UploadDropzone() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // empty deps → only runs on unmount
-  
+
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ accept: { "image/*": [] }, onDrop, disabled: isProcessing });
 
@@ -178,12 +196,12 @@ export default function UploadDropzone() {
     setSelectedPreset(null);
     const { name, value } = e.target;
     if (value === "") {
-        setResizeDimensions(prev => ({ ...prev, [name]: 0 }));
+      setResizeDimensions(prev => ({ ...prev, [name]: 0 }));
     } else {
-        const numValue = parseInt(value, 10);
-        if (!isNaN(numValue)) {
-            setResizeDimensions(prev => ({ ...prev, [name]: numValue }));
-        }
+      const numValue = parseInt(value, 10);
+      if (!isNaN(numValue)) {
+        setResizeDimensions(prev => ({ ...prev, [name]: numValue }));
+      }
     }
   };
   const handleBorderRadiusChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,7 +223,7 @@ export default function UploadDropzone() {
     }
   };
   const handleFilenameTemplateChange = (e: React.ChangeEvent<HTMLInputElement>) => setFilenameTemplate(e.target.value);
-  
+
   const handlePresetSelect = (presetKey: string | null) => {
     if (presetKey === null) {
       setSelectedPreset(null);
@@ -214,94 +232,102 @@ export default function UploadDropzone() {
 
     const presetCategory = Object.keys(presets).find(category => presets[category][presetKey]);
     if (!presetCategory) return;
-    
+
     const preset = presets[presetCategory][presetKey];
     if (preset) {
-        setSelectedPreset(presetKey);
-        setResizeDimensions({ width: preset.width, height: preset.height });
-        setFitOption(preset.fit);
-        if (preset.radius !== undefined) {
-            setBorderRadius(Number(preset.radius)); // Ensure it's a number
-        }
+      setSelectedPreset(presetKey);
+      setResizeDimensions({ width: preset.width, height: preset.height });
+      setFitOption(preset.fit);
+      if (preset.radius !== undefined) {
+        setBorderRadius(Number(preset.radius)); // Ensure it's a number
+      }
     }
   };
 
   const handleProcessImages = () => {
     if (images.length === 0 || isProcessing) return;
 
-    const process = () => {
-        setIsProcessing(true);
-        setOverallProgress(0);
-        setProcessedImageNames(new Set());
+    // Check if background removal is on and if it's the first time
+    if (removeBackground && !isModelCached) {
+      setShowConsentModal(true);
+      return;
+    }
 
-        const worker = createImageWorker();
-        const width = resizeDimensions.width || 512;
-        const height = resizeDimensions.height || 512;
+    startProcessing();
+  };
 
-        let effectiveFormat = format;
-        if (removeBackground && effectiveFormat === 'jpeg') {
-            effectiveFormat = 'png';
+  // Create a helper to actually trigger the worker (move previous handleProcessImages logic here)
+  const startProcessing = () => {
+    setIsProcessing(true);
+    setOverallProgress(0);
+    setProcessedImageNames(new Set());
+
+    const worker = createImageWorker();
+    const width = resizeDimensions.width || 512;
+    const height = resizeDimensions.height || 512;
+
+    let effectiveFormat = format;
+    if (removeBackground && effectiveFormat === 'jpeg') {
+      effectiveFormat = 'png';
+    }
+
+    worker.postMessage({
+      images: images.map(img => ({ file: img.originalFile, id: img.id })),
+      options: {
+        resize: { width, height, fit: fitOption },
+        borderRadius,
+        format: effectiveFormat,
+        quality: effectiveFormat === 'png' ? undefined : quality,
+        removeBackground: removeBackground,
+        filenameTemplate: filenameTemplate,
+        presetName: selectedPreset,
+      },
+    });
+
+    worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
+      const { data } = e;
+      if (data.type === 'progress') {
+        const { processedCount, totalCount, imageName } = data;
+        setOverallProgress((processedCount / totalCount) * 100);
+        setProcessedImageNames(prev => new Set(prev).add(imageName));
+      } else if (data.type === 'model-load-progress') {
+        const { current, total } = data;
+        setModelLoadProgress({ current, total });
+      } else if (data.type === 'done') {
+        const processedResults = data.results;
+
+        // SUCCESS: Mark model as cached if background removal was used
+        if (removeBackground) {
+          localStorage.setItem("bg-removal-model-cached", "true");
+          setIsModelCached(true);
         }
 
-        worker.postMessage({
-          images: images.map(img => ({ file: img.originalFile, id: img.id })),
-          options: {
-            resize: { width, height, fit: fitOption },
-            borderRadius,
-            format: effectiveFormat,
-            quality: effectiveFormat === 'png' ? undefined : quality,
-            removeBackground: removeBackground,
-            filenameTemplate: filenameTemplate,
-            presetName: selectedPreset,
-          },
-        });
-
-        worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
-          const { data } = e;
-          if (data.type === 'progress') {
-            const { processedCount, totalCount, imageName } = data;
-            setOverallProgress((processedCount / totalCount) * 100);
-            setProcessedImageNames(prev => new Set(prev).add(imageName));
-          } else if (data.type === 'model-load-progress') {
-            const { current, total } = data;
-            setModelLoadProgress({ current, total });
-          } else if (data.type === 'done') {
-            const processedResults = data.results;
-            setModelLoadProgress(null);
-            setImages(currentImages => currentImages.map(img => {
-                const result = processedResults.find(p => p.originalId === img.id);
-                if (!result || !result.filename) {
-                    console.warn(`Could not find processed result for image ID: ${img.id} or filename is missing.`);
-                    return img;
-                }
-                if (img.processedBlob) URL.revokeObjectURL(img.currentPreview);
-                return {
-                    ...img,
-                    currentPreview: URL.createObjectURL(result.blob),
-                    processedBlob: result.blob,
-                    processedFileName: result.filename,
-                    processedSize: result.size,
-                    processedWidth: result.width,
-                    processedHeight: result.height,
-                    processedFormat: result.filename.split('.').pop() as ImageFormat,
-                };
-            }));
-            setIsProcessing(false);
-            worker.terminate();
-          }
-        };
-         worker.onerror = (error) => {
-            console.error("Web worker error:", error);
-            setIsProcessing(false);
-        };
+        setModelLoadProgress(null);
+        setImages(currentImages => currentImages.map(img => {
+          const result = processedResults.find(p => p.originalId === img.id);
+          if (!result || !result.filename) return img;
+          if (img.processedBlob) URL.revokeObjectURL(img.currentPreview);
+          return {
+            ...img,
+            currentPreview: URL.createObjectURL(result.blob),
+            processedBlob: result.blob,
+            processedFileName: result.filename,
+            processedSize: result.size,
+            processedWidth: result.width,
+            processedHeight: result.height,
+            processedFormat: result.filename.split('.').pop() as ImageFormat,
+          };
+        }));
+        setIsProcessing(false);
+        worker.terminate();
+      }
     };
 
-    if (removeBackground) {
-        setShowModelConfirm(true);
-        setDeferredProcess(() => process);
-    } else {
-        process();
-    }
+    worker.onerror = (error) => {
+      console.error("Web worker error:", error);
+      setIsProcessing(false);
+      setModelLoadProgress(null);
+    };
   };
 
   const handleResetEffects = () => {
@@ -319,18 +345,18 @@ export default function UploadDropzone() {
         processedFormat: undefined,
       };
     }));
-    
+
     setResizeDimensions(defaultOptions.resizeDimensions);
     setBorderRadius(defaultOptions.borderRadius);
     setFormat(defaultOptions.format);
     setQuality(defaultOptions.quality);
     setFitOption(defaultOptions.fitOption);
-  
+
     setRemoveBackground(defaultOptions.removeBackground);
     setFilenameTemplate(defaultOptions.filenameTemplate);
     setSelectedPreset(null);
   };
-      
+
 
 
   const handleDownloadZip = async () => {
@@ -370,62 +396,41 @@ export default function UploadDropzone() {
 
   return (
     <div className="w-full max-w-5xl space-y-6 p-4 bg-white dark:bg-gray-900 rounded-xl shadow-lg"> {/* Main container with new styling */}
-      {/* Model Download Progress Modal */}
-      {modelLoadProgress && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-sm w-full mx-4">
-            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-              <svg className="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Downloading Model
-            </h2>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">
-              The background removal model is being downloaded. This is a one-time process and might take a moment.
-            </p>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
-              <div
-                className="bg-blue-600 h-4 rounded-full text-center text-white text-xs leading-none"
-                style={{ width: `${(modelLoadProgress.current / modelLoadProgress.total) * 100}%` }}
-              >
-                {((modelLoadProgress.current / modelLoadProgress.total) * 100).toFixed(0)}%
+
+      {/* Consent Modal for Model Download */}
+      {showConsentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl max-w-sm w-full mx-4 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-blue-600 dark:text-blue-400">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Download Required</h3>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                  To remove backgrounds, we need to download @imgly/background-removal model (~40MB).
+                </p>
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  This only happens once. Future uses will work offline.
+                </p>
               </div>
             </div>
-            <p className="text-right text-sm text-gray-600 dark:text-gray-400 mt-2">
-              {(modelLoadProgress.current / 1024 / 1024).toFixed(2)} MB / {(modelLoadProgress.total / 1024 / 1024).toFixed(2)} MB
-            </p>
-          </div>
-        </div>
-      )}
 
-      {/* Model Download Confirmation Dialog */}
-      {showModelConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-sm w-full mx-4">
-            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Download Background Removal Model</h2>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">
-              To enable background removal, a model file (~40 MB) needs to be downloaded. This is a one-time download and will be cached for future use. Do you want to proceed?
-            </p>
-            <div className="flex justify-end gap-4">
+            <div className="mt-6 flex justify-end gap-3">
               <button
-                onClick={() => {
-                  setShowModelConfirm(false);
-                  setDeferredProcess(null);
-                }}
-                className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                onClick={() => setShowConsentModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => {
-                  setShowModelConfirm(false);
-                  if (deferredProcess) {
-                    deferredProcess();
-                    setDeferredProcess(null); // Clear the deferred process after execution
-                  }
+                  setShowConsentModal(false);
+                  startProcessing();
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all"
               >
                 Download & Process
               </button>
@@ -433,6 +438,55 @@ export default function UploadDropzone() {
           </div>
         </div>
       )}
+
+
+
+      {/* Model Download Progress Modal */}
+      {modelLoadProgress && modelLoadProgress.current < modelLoadProgress.total && (
+        <div className="fixed bottom-6 right-6 z-50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-2xl w-80 border border-gray-100 dark:border-gray-700">
+
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-sm font-bold text-gray-900 dark:text-white">
+                {/* Change text based on cache status */}
+                {isModelCached
+                  ? "Removing background"
+                  : "Downloading @imgly/background-removal model..."
+                }
+              </p>
+              <span className="text-xs font-mono text-gray-500">
+                {Math.round((modelLoadProgress.current / modelLoadProgress.total) * 100)}%
+              </span>
+            </div>
+
+            {!isModelCached ? (
+              <>
+                {/* Detailed Progress Bar for Downloads */}
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                    style={{
+                      width: `${(modelLoadProgress.current / modelLoadProgress.total) * 100}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-2 text-right">
+                  {(modelLoadProgress.current / 1024 / 1024).toFixed(1)} MB /
+                  {(modelLoadProgress.total / 1024 / 1024).toFixed(1)} MB
+                </p>
+              </>
+            ) : (
+              /* Simple Spinner for Cached Loads */
+              <div className="flex items-center gap-2 mt-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1 overflow-hidden">
+                  <div className="bg-green-500 h-1 rounded-full animate-progress-indeterminate w-1/3"></div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
 
       {/* Header with info icon */}
       <div className="flex items-center justify-between mb-6">
@@ -448,35 +502,41 @@ export default function UploadDropzone() {
 
       {/* Info Modal */}
       {showInfoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">About This Tool</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 transition-transform transform scale-95 animate-fade-in">
+            <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">About This Tool</h2>
+
             <p className="text-gray-700 dark:text-gray-300 mb-4">
-              This tool allows batch image processing including resize, format conversion, corner rounding,
-              aspect ratio adjustments, and presets.
+              This tool is a batch image processor for resizing, format conversion, corner rounding, aspect ratio adjustments, and presets.
             </p>
+
             <p className="text-gray-700 dark:text-gray-300 mb-4">
-              Check out the open-source repository on{' '}
+              GitHub Repository:{' '}
               <a
-                href="https://github.com/GoogleForDevelopers/gemini-pro-vision-example"
+                href="https://github.com/zamirszn/batch-image-tool"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:underline dark:text-blue-400"
+                className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 font-semibold underline"
               >
-                GitHub
+                zamirszn/batch-image-tool
               </a>
-              .
             </p>
-            <button
-              onClick={toggleInfoModal}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-            >
-              Close
-            </button>
+
+            <p className="text-gray-700 dark:text-gray-300 mb-6">
+              Contact: <a href="mailto:mubaraklawal52@gmail.com" className="text-blue-600 hover:underline dark:text-blue-400">mubaraklawal52@gmail.com</a>
+            </p>
+
+            <div className="flex justify-end">
+              <button
+                onClick={toggleInfoModal}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
-
       {/* Dropzone */}
       <div {...getRootProps()} className={`border-2 border-dashed p-10 text-center cursor-pointer transition ${isDragActive ? "border-blue-500 bg-blue-50 dark:bg-blue-900/50" : "border-gray-300 dark:border-gray-600"} shadow-md rounded-lg`}>
         <input {...getInputProps()} />
@@ -491,11 +551,11 @@ export default function UploadDropzone() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label htmlFor="width" className="block text-xs text-gray-600 dark:text-gray-400">Width</label>
-                  <input type="number" id="width" name="width" value={resizeDimensions.width || ''} onChange={handleDimensionChange} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" disabled={isUIDisabled}/>
+                  <input type="number" id="width" name="width" value={resizeDimensions.width || ''} onChange={handleDimensionChange} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" disabled={isUIDisabled} />
                 </div>
                 <div>
                   <label htmlFor="height" className="block text-xs text-gray-600 dark:text-gray-400">Height</label>
-                  <input type="number" id="height" name="height" value={resizeDimensions.height || ''} onChange={handleDimensionChange} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" disabled={isUIDisabled}/>
+                  <input type="number" id="height" name="height" value={resizeDimensions.height || ''} onChange={handleDimensionChange} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" disabled={isUIDisabled} />
                 </div>
               </div>
               <div>
@@ -512,7 +572,7 @@ export default function UploadDropzone() {
               <div className="flex items-center gap-4">
                 <div className="flex-grow">
                   <label htmlFor="borderRadius" className="block text-xs text-gray-600 dark:text-gray-400">Corners: {borderRadius}px</label>
-                  <input type="range" id="borderRadius" name="borderRadius" min="0" max="100" value={borderRadius} onChange={handleBorderRadiusChange} className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50" disabled={isUIDisabled}/>
+                  <input type="range" id="borderRadius" name="borderRadius" min="0" max="100" value={borderRadius} onChange={handleBorderRadiusChange} className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50" disabled={isUIDisabled} />
                 </div>
                 <div className="w-12 h-12 bg-gray-300 dark:bg-gray-500 border-2 border-gray-400 dark:border-gray-600 rounded-md transition-all duration-100" style={{ borderRadius: `${borderRadius}px` }}></div> {/* Added rounded-md here */}
               </div>
@@ -531,11 +591,11 @@ export default function UploadDropzone() {
               </div>
               <div>
                 <label htmlFor="quality" className="block text-xs text-gray-600 dark:text-gray-400">Quality: {quality}</label>
-                <input type="range" id="quality" name="quality" min="0" max="100" value={quality} onChange={handleQualityChange} className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50" disabled={isUIDisabled || format === 'png'}/> {/* Added focus:ring-2 */}
+                <input type="range" id="quality" name="quality" min="0" max="100" value={quality} onChange={handleQualityChange} className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50" disabled={isUIDisabled || format === 'png'} /> {/* Added focus:ring-2 */}
               </div>
             </div>
           </div>
-          
+
           <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-6"> {/* Added mt-6 for spacing */}
             <div className="space-y-3">
               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Presets</h3>
@@ -543,11 +603,10 @@ export default function UploadDropzone() {
                 <button
                   onClick={() => handlePresetSelect(null)}
                   disabled={isUIDisabled}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors disabled:opacity-50 ${
-                    selectedPreset === null
-                      ? 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 active:bg-gray-400 dark:active:bg-gray-500'
-                  } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800`}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors disabled:opacity-50 ${selectedPreset === null
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 active:bg-gray-400 dark:active:bg-gray-500'
+                    } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800`}
                 >
                   Custom Size
                 </button>
@@ -561,11 +620,10 @@ export default function UploadDropzone() {
                         key={key}
                         onClick={() => handlePresetSelect(key)}
                         disabled={isUIDisabled}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors disabled:opacity-50 ${
-                          selectedPreset === key
-                            ? 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-                            : 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 active:bg-gray-400 dark:active:bg-gray-500'
-                        } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800`}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors disabled:opacity-50 ${selectedPreset === key
+                          ? 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                          : 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 active:bg-gray-400 dark:active:bg-gray-500'
+                          } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800`}
                       >
                         {preset.name}
                       </button>
@@ -601,72 +659,73 @@ export default function UploadDropzone() {
 
       {/* Image Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6">
-  {images.map((img) => (
-    <div key={img.id} className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg shadow-md overflow-hidden group">
-      <img src={img.currentPreview} alt={`preview of ${img.originalFile.name}`} className="w-full h-full object-cover rounded-md"/>
+        {images.map((img) => (
+          <div key={img.id} className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg shadow-md overflow-hidden group">
+            <img src={img.currentPreview} alt={`preview of ${img.originalFile.name}`} className="w-full h-full object-cover rounded-md" />
 
-      {/* Close button for unprocessed images */}
-      {!img.processedBlob && !isProcessing && (
-        <button
-          onClick={() => removeImage(img.id)}
-          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs hover:bg-red-600 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-          disabled={isProcessing}
-        >
-          &times;
-        </button>
-      )}
+            {/* Close button for unprocessed images */}
+            {!img.processedBlob && !isProcessing && (
+              <button
+                onClick={() => removeImage(img.id)}
+                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs hover:bg-red-600 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                disabled={isProcessing}
+              >
+                &times;
+              </button>
+            )}
 
-      {/* Spinner overlay during processing */}
-      {isProcessing && (
-        <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
-          {processedImageNames.has(img.originalFile.name) ? (
-            <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          ) : (
-            <svg className="animate-spin w-8 h-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          )}
-        </div>
-      )}
+            {/* Spinner overlay during processing */}
+            {isProcessing && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
+                {processedImageNames.has(img.originalFile.name) ? (
+                  <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="animate-spin w-8 h-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+              </div>
+            )}
 
-      {/* Hover Overlay for Info + Buttons */}
-      {img.processedBlob && (
-        <div className="absolute inset-0 bg-black/70 text-white text-xs p-2 overflow-auto flex flex-col justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto">
-          <div>
-            <p><strong>Original:</strong> {img.originalFile.name}</p>
-            <p><strong>Size:</strong> {formatBytes(img.originalFile.size)}</p>
-            {img.processedFileName && <p><strong>Processed:</strong> {img.processedFileName}</p>}
-            {img.processedSize !== undefined && <p><strong>Size:</strong> {formatBytes(img.processedSize)}</p>}
-            {img.processedWidth && img.processedHeight && <p><strong>Dims:</strong> {img.processedWidth}x{img.processedHeight}</p>}
-            {img.processedFormat && <p><strong>Format:</strong> {img.processedFormat.toUpperCase()}</p>}
+            {/* Hover Overlay for Info + Buttons */}
+            {img.processedBlob && (
+              <div className="absolute inset-0 bg-black/70 text-white text-xs p-2 overflow-auto flex flex-col justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto">
+                <div>
+                  <p><strong>Original:</strong> {img.originalFile.name}</p>
+                  <p><strong>Size:</strong> {formatBytes(img.originalFile.size)}</p>
+                  {img.processedFileName && <p><strong>Processed:</strong> {img.processedFileName}</p>}
+                  {img.processedSize !== undefined && <p><strong>Size:</strong> {formatBytes(img.processedSize)}</p>}
+                  {img.processedWidth && img.processedHeight && <p><strong>Dims:</strong> {img.processedWidth}x{img.processedHeight}</p>}
+                  {img.processedFormat && <p><strong>Format:</strong> {img.processedFormat.toUpperCase()}</p>}
+                </div>
+
+                {/* Buttons at the bottom of overlay */}
+                <div className="flex justify-between mt-2 gap-2">
+                  <button
+                    onClick={() => handleDownloadSingleFile(img)}
+                    className="flex-1 px-2 py-1 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                    disabled={!img.processedBlob || isProcessing}
+                  >
+                    Download
+                  </button>
+
+                  <button
+                    onClick={() => removeImage(img.id)}
+                    className="px-2 py-1 bg-red-500 text-white rounded-md text-xs hover:bg-red-600 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                    disabled={isProcessing}
+                  >
+                    &times;
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* Buttons at the bottom of overlay */}
-          <div className="flex justify-between mt-2 gap-2">
-            <button
-              onClick={() => handleDownloadSingleFile(img)}
-              className="flex-1 px-2 py-1 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-              disabled={!img.processedBlob || isProcessing}
-            >
-              Download
-            </button>
-
-            <button
-              onClick={() => removeImage(img.id)}
-              className="px-2 py-1 bg-red-500 text-white rounded-md text-xs hover:bg-red-600 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-              disabled={isProcessing}
-            >
-              &times;
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  ))}
-</div>
+        ))}
+      </div>
 
     </div>
-  )}
+  )
+}
