@@ -12,9 +12,9 @@ A **Next.js** web application for batch processing images with features like res
 * Supports JPEG, PNG, and WebP formats
 * Maintains high performance using Web Workers
 
-## Demo
+## Link
 
-> Add link to live demo if available
+https://batch-images-tool.vercel.app/
 
 ## Installation
 
